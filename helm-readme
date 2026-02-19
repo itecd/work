@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "test.fullname" . }}-config
+  labels:
+    {{- include "test.labels" . | nindent 4 }}
+data:
+  {{- /* 1. Extract the domain by removing the protocol (http/https) from the input value */ -}}
+  {{- $apiUrl := .Values.clusterApiUrl | default "" | replace "https://" "" | replace "http://" "" }}
+
+  {{- /* 2. Split the domain string into a list using '.' as a delimiter */ -}}
+  {{- $parts := splitList "." $apiUrl }}
+
+  {{- /* 3. Validate: Check if list has > 2 parts AND starts with 'api' (e.g., api.env.region.com) */ -}}
+  {{- if and (gt (len $parts) 2) (eq (index $parts 0) "api") }}
+    
+    {{- /* 4. Extract the 2nd and 3rd segments of the URL (index 1 and 2) */ -}}
+    {{- $first := index $parts 1 }}
+    {{- $second := index $parts 2 }}
+    
+    {{- /* 5. Format segments into 'env_region' format and convert to lowercase */ -}}
+    {{- $keyName := printf "%s_%s" $first $second | lower }}
+    
+    keyname: {{ $keyName }}
+    mount: {{ $keyName }}
+  
+  {{- /* 6. Fallback logic if the URL structure doesn't match the 'api.xxx.xxx' pattern */ -}}
+  {{- else }}
+    keyname: "error_parsing_url"
+    mount: "error_parsing_url"
+  {{- end }}
