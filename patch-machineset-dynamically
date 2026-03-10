@@ -56,7 +56,37 @@ oc get machineset <machineset_name> -n openshift-machine-api -o yaml | grep -A5 
 
 
 
+PATCH A SINGLE MACHINESET
+- name: Patch a single MachineSet tags
+  hosts: localhost
+  gather_facts: no
+  collections:
+    - kubernetes.core
 
+  vars:
+    machineset_name: mycluster-worker-extra   # <-- the MachineSet you want to patch
+    namespace: openshift-machine-api
+
+  tasks:
+
+    - name: Patch tags for the specific MachineSet
+      kubernetes.core.k8s:
+        state: present
+        api_version: machine.openshift.io/v1beta1
+        kind: MachineSet
+        name: "{{ machineset_name }}"
+        namespace: "{{ namespace }}"
+        merge_type: merge
+        definition:
+          spec:
+            template:
+              spec:
+                providerSpec:
+                  value:
+                    tags:
+                      to_intake: "{{ to_intake | string }}"
+                      mapid: "{{ mapid | string }}"
+                      transit: "{{ transit | string }}"
 
 
 
