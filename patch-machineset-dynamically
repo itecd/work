@@ -50,3 +50,17 @@ Updating MachineSet tags:
 
 ✔ Affects new machines created after the change
 ❌ Does NOT update existing Azure VMs
+
+to verify
+oc get machineset <machineset_name> -n openshift-machine-api -o yaml | grep -A5 tags
+
+
+
+
+
+
+
+
+
+
+
