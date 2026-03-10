@@ -1,0 +1,52 @@
+
+
+patching ,
+apply tags ✔ Affects new machines created after the change
+❌ Does NOT update existing Azure VMs
+
+- name: Discover and patch MachineSets
+  hosts: localhost
+  gather_facts: no
+  collections:
+    - kubernetes.core
+
+  vars:
+    namespace: openshift-machine-api
+
+  tasks:
+
+    - name: Get all MachineSets
+      kubernetes.core.k8s_info:
+        api_version: machine.openshift.io/v1beta1
+        kind: MachineSet
+        namespace: "{{ namespace }}"
+      register: machinesets
+
+    - name: Patch MachineSet tags
+      kubernetes.core.k8s:
+        state: present
+        api_version: machine.openshift.io/v1beta1
+        kind: MachineSet
+        name: "{{ item.metadata.name }}"
+        namespace: "{{ namespace }}"
+        merge_type: merge
+        definition:
+          spec:
+            template:
+              spec:
+                providerSpec:
+                  value:
+                    tags:
+                      to_intake: "{{ to_intake | string }}"
+                      mapid: "{{ mapid | string }}"
+                      transit: "{{ transit | string }}"
+      loop: "{{ machinesets.resources }}"
+	  
+	  
+	  
+Important Behavior in OpenShift
+
+Updating MachineSet tags:
+
+✔ Affects new machines created after the change
+❌ Does NOT update existing Azure VMs
