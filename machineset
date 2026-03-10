@@ -1,0 +1,272 @@
+
+
+1️⃣ AAP Survey Configuration
+
+In your Job Template → Survey, define variables like:
+
+| Question        | Variable Name     | Example  |
+| --------------- | ----------------- | -------- |
+| Environment Tag | `environment_tag` | prod     |
+| Owner Tag       | `owner_tag`       | devops   |
+| Application Tag | `application_tag` | payments |
+| Cost Center Tag | `costcenter_tag`  | 12345    |
+	
+
+name: Create MachineSet using AAP survey tags
+hosts: localhost
+gather_facts: false
+
+vars:
+namespace: openshift-machine-api
+
+machineset_tags:
+- name: Environment
+value: "{{ environment_tag }}"
+- name: Owner
+value: "{{ owner_tag }}"
+- name: Application
+value: "{{ application_tag }}"
+- name: CostCenter
+value: "{{ costcenter_tag }}"
+
+tasks:
+
+name: Create MachineSet
+kubernetes.core.k8s:
+state: present
+definition:
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+name: "{{ machineset_name }}"
+namespace: "{{ namespace }}"
+spec:
+template:
+spec:
+providerSpec:
+value:
+tags: "{{ machineset_tags }}"
+
+
+======
+create machineset_name---
+
+* name: Create MachineSet using survey tag variables
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+  namespace: openshift-machine-api
+  cluster_name: "{{ cluster_name }}"
+  machineset_name: "{{ machineset_name }}"
+  region: "{{ region }}"
+  zone: "{{ zone }}"
+  instance_type: "{{ instance_type }}"
+  replicas: "{{ replicas }}"
+
+  machineset_tags:
+  - name: Environment
+  value: "{{ environment_tag }}"
+  - name: Owner
+  value: "{{ owner_tag }}"
+  - name: Application
+  value: "{{ application_tag }}"
+  - name: CostCenter
+  value: "{{ costcenter_tag }}"
+
+  tasks:
+
+  * name: Create MachineSet
+    kubernetes.core.k8s:
+    state: present
+    kubeconfig: ~/.kube/config
+    definition:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineSet
+    metadata:
+    name: "{{ machineset_name }}"
+    namespace: "{{ namespace }}"
+    labels:
+    machine.openshift.io/cluster-api-cluster: "{{ cluster_name }}"
+    spec:
+    replicas: "{{ replicas }}"
+    selector:
+    matchLabels:
+    machine.openshift.io/cluster-api-cluster: "{{ cluster_name }}"
+    machine.openshift.io/cluster-api-machineset: "{{ machineset_name }}"
+    template:
+    metadata:
+    labels:
+    machine.openshift.io/cluster-api-cluster: "{{ cluster_name }}"
+    machine.openshift.io/cluster-api-machineset: "{{ machineset_name }}"
+    spec:
+    providerSpec:
+    value:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: AWSMachineProviderConfig
+    instanceType: "{{ instance_type }}"
+    placement:
+    region: "{{ region }}"
+    availabilityZone: "{{ zone }}"
+    credentialsSecret:
+    name: aws-cloud-credentials
+    deviceIndex: 0
+    tags: "{{ machineset_tags }}"
+
+
+
+To ensure machines created by a MachineSet have a unique tag, you need to add tags in the providerSpec of the MachineSet template. The exact field depends on the cloud provider (AWS, Azure, GCP, vSphere, etc.).
+I'll show the AWS example since tagging is very common there.
+
+
+Since you're on Microsoft Azure, MachineSets use AzureMachineProviderSpec, 
+and tags are defined in the tags map inside the provider spec. These tags will be applied to the VMs created by the MachineSet.
+
+
+- name: Create Azure MachineSet
+  hosts: localhost
+  gather_facts: no
+  collections:
+    - kubernetes.core
+
+  vars:
+    namespace: openshift-machine-api
+    cluster_id: mycluster-abcde
+    machineset_name: worker-extra
+    replicas: 2
+    azure_region: eastus
+    vm_size: Standard_D4s_v3
+    unique_tag: "ansible-{{ lookup('pipe','date +%s') }}"
+
+  tasks:
+    - name: Create MachineSet
+      kubernetes.core.k8s:
+        state: present
+        kubeconfig: ~/.kube/config
+        definition:
+          apiVersion: machine.openshift.io/v1beta1
+          kind: MachineSet
+          metadata:
+            name: "{{ cluster_id }}-{{ machineset_name }}"
+            namespace: "{{ namespace }}"
+            labels:
+              machine.openshift.io/cluster-api-cluster: "{{ cluster_id }}"
+          spec:
+            replicas: "{{ replicas }}"
+            selector:
+              matchLabels:
+                machine.openshift.io/cluster-api-machineset: "{{ cluster_id }}-{{ machineset_name }}"
+            template:
+              metadata:
+                labels:
+                  machine.openshift.io/cluster-api-cluster: "{{ cluster_id }}"
+                  machine.openshift.io/cluster-api-machine-role: worker
+                  machine.openshift.io/cluster-api-machine-type: worker
+                  machine.openshift.io/cluster-api-machineset: "{{ cluster_id }}-{{ machineset_name }}"
+              spec:
+                providerSpec:
+                  value:
+                    apiVersion: azureproviderconfig.openshift.io/v1beta1
+                    kind: AzureMachineProviderSpec
+                    location: "{{ azure_region }}"
+                    vmSize: "{{ vm_size }}"
+                    managedIdentity: "{{ cluster_id }}-identity"
+                    resourceGroup: "{{ cluster_id }}-rg"
+                    vnet: "{{ cluster_id }}-vnet"
+                    subnet: "{{ cluster_id }}-worker-subnet"
+
+                    tags:
+                      environment: dev
+                      machineset: "{{ machineset_name }}"
+                      deployment_id: "{{ unique_tag }}"
+					  
+					  
+					  
+					  I want this tags as
+					  to_intake: 1416
+					  mapid: 4545
+					  transit: 1313
+					  
+					  
+					  
+					  
+					  pass them as survey in aap 
+					  
+					  
+- name: Create OpenShift MachineSet
+  hosts: localhost
+  gather_facts: no
+  collections:
+    - kubernetes.core
+
+  tasks:
+    - name: Create MachineSet
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: machine.openshift.io/v1beta1
+          kind: MachineSet
+          metadata:
+            name: "{{ cluster_id }}-worker-extra"
+            namespace: openshift-machine-api
+          spec:
+            replicas: 2
+            template:
+              spec:
+                providerSpec:
+                  value:
+                    apiVersion: azureproviderconfig.openshift.io/v1beta1
+                    kind: AzureMachineProviderSpec
+
+                    tags:
+                      to_intake: "{{ to_intake | string }}"
+                      mapid: "{{ mapid | string }}"
+                      transit: "{{ transit | string }}"
+					  
+these tag
+                    tags:
+                      to_intake: "{{ to_intake | string }}"
+                      mapid: "{{ mapid | string }}"
+                      transit: "{{ transit | string }}"
+					  
+can also be define in a j2 template and on the aap survey side ? 
+					  
+yes
+
+1. AAP Survey Variablesc	
+Create survey questions:
+
+Question	Variable Name
+To Intake	to_intake
+Map ID	mapid
+Transit	transit
+
+Example input when launching the job:
+to_intake: 1416
+mapid: 4545
+transit: 1313
+
+These automatically become playbook variables.
+
+2. Jinja2 Template (machineset.yaml.j2)
+
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  name: {{ cluster_id }}-worker-extra
+  namespace: openshift-machine-api
+
+spec:
+  replicas: {{ replicas }}
+
+  template:
+    spec:
+      providerSpec:
+        value:
+          apiVersion: azureproviderconfig.openshift.io/v1beta1
+          kind: AzureMachineProviderSpec
+
+          tags:
+            to_intake: "{{ to_intake }}"
+            mapid: "{{ mapid }}"
+            transit: "{{ transit }}"
