@@ -209,5 +209,12 @@ Using COMMAND NO MODULE
 
 
 
+    - name: Login to OpenShift using token
+      ansible.builtin.command: >
+        oc login {{ ocp_api_url }}
+        --token={{ ocp_token }}
+        --insecure-skip-tls-verify=true
+      register: oc_login
+      changed_when: false
 
 
