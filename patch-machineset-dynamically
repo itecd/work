@@ -166,6 +166,47 @@ PATCH FOR SINGLE MS local variable
                       transit: "{{ transit | string }}"
 
 
+Using COMMAND NO MODULE
+---
+- name: Patch Azure MachineSet tags using oc CLI
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    machineset_name: mycluster-worker-extra
+    namespace: openshift-machine-api
+
+    to_intake: 3545
+    mapid: 35564
+    transit: 887757
+
+  tasks:
+
+    - name: Patch MachineSet tags
+      ansible.builtin.command: >
+        oc patch machineset {{ machineset_name }}
+        -n {{ namespace }}
+        --type=merge
+        -p '{
+          "spec": {
+            "template": {
+              "spec": {
+                "providerSpec": {
+                  "value": {
+                    "apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+                    "kind": "AzureMachineProviderSpec",
+                    "tags": {
+                      "to_intake": "{{ to_intake }}",
+                      "mapid": "{{ mapid }}",
+                      "transit": "{{ transit }}"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }'
+
 
 
 
