@@ -125,6 +125,46 @@ PATCH FOR SINGLE MS local variable
                       mapid: "{{ mapid | string }}"
                       transit: "{{ transit | string }}"
 
+==for azure adding azure provider spec
+---
+- name: Patch Azure MachineSet tags
+  hosts: localhost
+  gather_facts: no
+  collections:
+    - kubernetes.core
+
+  vars:
+    machineset_name: mycluster-worker-extra
+    namespace: openshift-machine-api
+
+    # Tags you want applied to future machines
+    to_intake: 3545
+    mapid: 35564
+    transit: 887757
+
+  tasks:
+
+    - name: Patch MachineSet with Azure providerSpec tags
+      kubernetes.core.k8s:
+        state: present
+        api_version: machine.openshift.io/v1beta1
+        kind: MachineSet
+        name: "{{ machineset_name }}"
+        namespace: "{{ namespace }}"
+        merge_type: merge
+        definition:
+          spec:
+            template:
+              spec:
+                providerSpec:
+                  value:
+                    apiVersion: azureproviderconfig.openshift.io/v1beta1
+                    kind: AzureMachineProviderSpec
+                    tags:
+                      to_intake: "{{ to_intake | string }}"
+                      mapid: "{{ mapid | string }}"
+                      transit: "{{ transit | string }}"
+
 
 
 
