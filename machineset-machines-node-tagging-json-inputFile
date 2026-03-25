@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+
+# Exit immediately if a command fails
+# Treat unset variables as errors
+# Ensure pipeline failures are not ignored
+set -euo pipefail
+
+# Path to JSON input file
+INPUT_FILE="input.json"
+
+# OpenShift namespace where MachineSets and Machines exist
+NAMESPACE="openshift-machine-api"
+
+# ---------------------------
+# Loop through each object in the JSON array
+# ---------------------------
+jq -c '.[]' "$INPUT_FILE" | while read -r item; do
+
+  # Extract values from JSON object using jq
+  machineset_name=$(echo "$item" | jq -r '.machineset_name')
+  intake_number=$(echo "$item" | jq -r '.intake_number')
+  transit=$(echo "$item" | jq -r '.transit')
+  mapid=$(echo "$item" | jq -r '.mapid')
+
+  # Convert JSON arrays (machines, nodes) into comma-separated strings
+  # This allows easy looping later
+  machines=$(echo "$item" | jq -r '.machines | join(",")')
+  nodes=$(echo "$item" | jq -r '.nodes | join(",")')
+
+  echo "========================================"
+  echo "MachineSet: $machineset_name"
+  echo "Intake: $intake_number | Transit: $transit | MapID: $mapid"
+
+  # ---------------------------
+  # 1. Patch MachineSet
+  # ---------------------------
+  # This updates Azure tags in providerSpec
+  # NOTE: Only affects FUTURE VMs created by this MachineSet
+  echo "Patching MachineSet..."
+
+  oc patch machineset "$machineset_name" -n "$NAMESPACE" --type merge -p "{
+    \"spec\": {
+      \"template\": {
+        \"spec\": {
+          \"providerSpec\": {
+            \"value\": {
+              \"tags\": {
+                \"intake_number\": \"$intake_number\",
+                \"transit\": \"$transit\",
+                \"mapid\": \"$mapid\"
+              }
+            }
+          }
+        }
+      }
+    }
+  }"
+
+  # ---------------------------
+  # 2. Tag Azure VMs (existing Machines)
+  # ---------------------------
+
+  # Convert comma-separated machines string into array
+  IFS=',' read -ra MACHINE_ARRAY <<< "$machines"
+
+  for machine in "${MACHINE_ARRAY[@]}"; do
+    # Trim any accidental whitespace
+    machine=$(echo "$machine" | xargs)
+
+    echo "Processing Machine: $machine"
+
+    # Check if Machine exists in OpenShift
+    # If not, skip instead of failing script
+    if ! oc get machine "$machine" -n "$NAMESPACE" &>/dev/null; then
+      echo "⚠️  Machine not found: $machine (skipping)"
+      continue
+    fi
+
+    # Get providerID which contains Azure resource details
+    PROVIDER_ID=$(oc get machine "$machine" -n "$NAMESPACE" -o jsonpath='{.spec.providerID}')
+
+    # Extract VM name (last part of the providerID path)
+    VM_NAME=$(echo "$PROVIDER_ID" | awk -F/ '{print $NF}')
+
+    # Extract Azure Resource Group (part of providerID path)
+    RG=$(echo "$PROVIDER_ID" | awk -F/ '{print $(NF-4)}')
+
+    echo "→ Tagging Azure VM: $VM_NAME (RG: $RG)"
+
+    # Apply tags to Azure VM
+    # This updates EXISTING infrastructure
+    az vm update \
+      --resource-group "$RG" \
+      --name "$VM_NAME" \
+      --set tags.intake_number="$intake_number" tags.transit="$transit" tags.mapid="$mapid"
+  done
+
+  # ---------------------------
+  # 3. Label Kubernetes Nodes
+  # ---------------------------
+
+  # Convert comma-separated nodes string into array
+  IFS=',' read -ra NODE_ARRAY <<< "$nodes"
+
+  for node in "${NODE_ARRAY[@]}"; do
+    # Trim whitespace
+    node=$(echo "$node" | xargs)
+
+    echo "Processing Node: $node"
+
+    # Check if node exists in cluster
+    if ! oc get node "$node" &>/dev/null; then
+      echo "⚠️  Node not found: $node (skipping)"
+      continue
+    fi
+
+    echo "→ Labeling Node"
+
+    # Apply labels to Kubernetes node
+    # Labels are used for scheduling, grouping, etc.
+    oc label node "$node" \
+      intake_number="$intake_number" \
+      transit="$transit" \
+      mapid="$mapid" \
+      --overwrite
+  done
+
+done
+
+echo "✅ Completed all MachineSet, Machine, and Node updates."
+
+
+
+
+
+
+#input file
+
+
+
+JSON FILE input
+
+[
+  {
+    "machineset_name": "devocpmachineset",
+    "intake_number": "60986",
+    "transit": "4509",
+    "mapid": "4509",
+    "machines": ["mymachine1", "mymachine2"],
+    "nodes": ["mynode1", "mynode2"]
+  },
+  {
+    "machineset_name": "prodocpmachineset",
+    "intake_number": "77777",
+    "transit": "8888",
+    "mapid": "12345",
+    "machines": ["prodmachine1", "prodmachine2"],
+    "nodes": ["prodnode1", "prodnode2"]
+  },
+  {
+    "machineset_name": "testocpmachineset",
+    "intake_number": "12345",
+    "transit": "9999",
+    "mapid": "5555",
+    "machines": ["testmachine1", "testmachine2"],
+    "nodes": ["testnode1", "testnode2"]
+  }
+]
