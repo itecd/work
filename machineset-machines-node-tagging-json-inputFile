@@ -1,3 +1,7 @@
+#sed -i 's/\r$//' myscript.sh convert script develop on windows environment so it run on linux
+# first check # cat -A myscript.sh | head -n 5  #If you see ^M at the end of lines, your file has Windows line endings or dos2unix myscript.sh if installed
+
+
 #!/usr/bin/env bash
 
 # Exit immediately if a command fails
