@@ -1,0 +1,66 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  name: mycluster-worker-eastus1
+  namespace: openshift-machine-api
+  labels:
+    machine.openshift.io/cluster-api-cluster: mycluster
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: mycluster
+      machine.openshift.io/cluster-api-machineset: mycluster-worker-eastus1
+  template:
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: mycluster
+        machine.openshift.io/cluster-api-machineset: mycluster-worker-eastus1
+    spec:
+      providerSpec:
+        value:
+          apiVersion: azureproviderconfig.openshift.io/v1beta1
+          kind: AzureMachineProviderSpec
+          location: eastus
+          vmSize: Standard_D4s_v3
+          zone: "1"
+
+          # Image reference (example: RHCOS)
+          image:
+            resourceID: /resourceGroups/my-rg/providers/Microsoft.Compute/images/my-rhcos-image
+
+          osDisk:
+            osType: Linux
+            diskSizeGB: 128
+            managedDisk:
+              storageAccountType: Premium_LRS
+
+          networkResourceGroup: my-network-rg
+          vnet: my-vnet
+          subnet: my-subnet
+
+          publicIP: false
+
+          credentialsSecret:
+            name: azure-cloud-credentials
+
+          userDataSecret:
+            name: worker-user-data
+
+          resourceGroup: my-compute-rg
+
+          # 🔹 Azure Tags applied to all created VMs
+          tags:
+            environment: production
+            owner: platform-team
+            costCenter: "12345"
+            workload: openshift-worker
+
+          # Optional: availability set (if not using zones)
+          # availabilitySet: my-availability-set
+
+          # Optional: managed identity
+          # managedIdentity: my-identity
+
+          # Optional: security group
+          # securityGroup: my-nsg
