@@ -1,0 +1,9 @@
+- name: Create MachineSet in OpenShift
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Apply MachineSet YAML
+      kubernetes.core.k8s:
+        state: present
+        kubeconfig: ~/.kube/config
+        src: ./machineset.yaml
