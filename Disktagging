@@ -93,4 +93,40 @@ az disk list \
 done
 
 
+==============pass tags as array so that azure cli dont get confuse
+
+
+
+#!/bin/bash
+
+# 1. Manually set your Resource Group here
+RESOURCE_GROUP="your_resource_group_name"
+
+# 2. Define your tags using a BASH ARRAY (note the parentheses)
+TAGS=(
+  Environment="Production"
+  Project="OpenShift"
+  Owner="DevOps"
+)
+
+# 3. Automatically get your cluster infrastructure tag
+INFRA_TAG=$(oc get infrastructure cluster -o jsonpath='{.status.infrastructureName}')
+
+# 4. Fetch the disk list and loop through them
+az disk list \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "[?tags.\"kubernetes.io-cluster-${INFRA_TAG}\" == 'owned'].name" \
+  --output tsv | while read -r DISK_NAME; do
+
+    echo "Overriding tags for disk: $DISK_NAME"
+
+    # 5. Expand the array using "${TAGS[@]}" to safely pass them
+    az disk update \
+        --name "$DISK_NAME" \
+        --resource-group "$RESOURCE_GROUP" \
+        --tags "${TAGS[@]}"
+
+    echo "Successfully updated $DISK_NAME"
+    echo "-----------------------------------"
+done
 
