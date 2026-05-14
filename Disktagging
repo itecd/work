@@ -23,5 +23,9 @@ disk-ocp-master-01,rg-openshift-prod,Environment=Production Cluster=ocp-prod Rol
 execution: ./script1.sh; ./script2.sh
 
 
+#get infra ID
+INFRA_TAG=$(oc get infrastructure cluster -o jsonpath='{.status.infrastructureName}')
+az disk list \
+  --query "[?tags.\"kubernetes.io-cluster-${INFRA_TAG}\" == 'owned'].{DiskName:name, ResourceGroup:resourceGroup, SizeGB:diskSizeGb, Status:diskState, AttachedToNode:managedBy}" \
+  --output table
 
-oc get pv -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.capacity.storage}{"\t"}{.spec.csi.volumeHandle}{"\n"}{end}'
