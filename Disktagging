@@ -21,3 +21,7 @@ disk-ocp-worker-01,rg-openshift-prod,Environment=Production Cluster=ocp-prod Own
 disk-ocp-master-01,rg-openshift-prod,Environment=Production Cluster=ocp-prod Role=master
 
 execution: ./script1.sh; ./script2.sh
+
+
+
+oc get pv -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.capacity.storage}{"\t"}{.spec.csi.volumeHandle}{"\n"}{end}'
