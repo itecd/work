@@ -34,3 +34,63 @@ az disk list \
   --query "[?tags.\"kubernetes.io-cluster-${INFRA_TAG}\" == 'owned'].name" \
   --output tsv
 
+
+=========
+=========solution ===overide existing tags=====================
+
+
+#!/bin/bash
+
+# 1. Manually set your Resource Group and Tags here
+RESOURCE_GROUP="your_resource_group_name"
+TAGS="Environment=Production Project=OpenShift Owner=DevOps"
+
+# 2. Automatically get your cluster infrastructure tag
+INFRA_TAG=$(oc get infrastructure cluster -o jsonpath='{.status.infrastructureName}')
+
+# 3. Fetch the disk list and loop through them
+az disk list \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "[?tags.\"kubernetes.io-cluster-${INFRA_TAG}\" == 'owned'].name" \
+  --output tsv | while read -r DISK_NAME; do
+
+    echo "Updating tags for disk: $DISK_NAME in resource group: $RESOURCE_GROUP"
+
+    # 4. Apply the tags directly
+    az disk update \
+        --name "$DISK_NAME" \
+        --resource-group "$RESOURCE_GROUP" \
+        --tags $TAGS
+
+    echo "Successfully updated $DISK_NAME"
+    echo "-----------------------------------"
+done
+
+
+===Preserve existing tags
+
+#!/bin/bash
+
+RESOURCE_GROUP="your_resource_group_name"
+
+INFRA_TAG=$(oc get infrastructure cluster -o jsonpath='{.status.infrastructureName}')
+
+az disk list \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "[?tags.\"kubernetes.io-cluster-${INFRA_TAG}\" == 'owned'].name" \
+  --output tsv | while read -r DISK_NAME; do
+
+    echo "Safely adding tags to: $DISK_NAME"
+
+    # Use --add instead of --tags to preserve existing tags
+    az disk update \
+        --name "$DISK_NAME" \
+        --resource-group "$RESOURCE_GROUP" \
+        --add tags.Environment="Production" tags.Project="OpenShift" tags.Owner="DevOps"
+
+    echo "Successfully updated $DISK_NAME"
+    echo "-----------------------------------"
+done
+
+
+
