@@ -1,0 +1,23 @@
+#!/bin/bash
+
+INPUT_FILE="disks.csv"
+
+# diskName,resourceGroup,tags
+
+while IFS=',' read -r DISK_NAME RESOURCE_GROUP TAGS
+do
+  az disk update \
+    --name "$DISK_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --set tags={$TAGS}
+
+  echo "Tagged: $DISK_NAME"
+
+done < "$INPUT_FILE"
+
+
+The input file
+disk-ocp-worker-01,rg-openshift-prod,Environment=Production Cluster=ocp-prod Owner=platform-team
+disk-ocp-master-01,rg-openshift-prod,Environment=Production Cluster=ocp-prod Role=master
+
+execution: ./script1.sh; ./script2.sh
