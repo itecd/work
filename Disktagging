@@ -29,3 +29,8 @@ az disk list \
   --query "[?tags.\"kubernetes.io-cluster-${INFRA_TAG}\" == 'owned'].{DiskName:name, ResourceGroup:resourceGroup, SizeGB:diskSizeGb, Status:diskState, AttachedToNode:managedBy}" \
   --output table
 
+#disk name only
+az disk list \
+  --query "[?tags.\"kubernetes.io-cluster-${INFRA_TAG}\" == 'owned'].name" \
+  --output tsv
+
