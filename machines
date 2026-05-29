@@ -1,0 +1,4 @@
+oc patch machine cluster-abc-worker-eastus1-xyz12 \
+  -n openshift-machine-api \
+  --type=json \
+  -p='[{"op":"remove","path":"/metadata/finalizers"}]'
