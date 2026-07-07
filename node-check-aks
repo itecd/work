@@ -1,0 +1,3 @@
+kubectl get events \
+  --field-selector involvedObject.kind=Node,involvedObject.name=aks-nodepool1-12345678-vmss000001 \
+  --sort-by='.lastTimestamp'
