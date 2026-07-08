@@ -1,3 +1,13 @@
 kubectl get events \
   --field-selector involvedObject.kind=Node,involvedObject.name=aks-nodepool1-12345678-vmss000001 \
   --sort-by='.lastTimestamp'
+
+
+
+check pod with dir local storage
+
+kubectl get pods -A -o json | jq -r '
+  .items[]
+  | select(.spec.volumes[]? | has("emptyDir"))
+  | "\(.metadata.namespace)/\(.metadata.name)"
+'
