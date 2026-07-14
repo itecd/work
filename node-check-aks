@@ -11,3 +11,12 @@ kubectl get pods -A -o json | jq -r '
   | select(.spec.volumes[]? | has("emptyDir"))
   | "\(.metadata.namespace)/\(.metadata.name)"
 '
+
+
+kubectl patch application my-app -n argocd --type merge \
+  -p '{"spec":{"syncPolicy":{}}}'
+
+
+kubectl patch application my-app -n argocd --type merge \
+  -p '{"spec":{"syncPolicy":{"automated":{}}}}'
+
