@@ -1,0 +1,6 @@
+az aks nodepool update \
+  --resource-group <your-resource-group> \
+  --cluster-name <your-cluster-name> \
+  --name wsaspool1 \
+  --node-taints wsaspool1=true:NoSchedule \
+  --labels node-role.kubernetes.io/wsaspool1=true
